@@ -72,13 +72,12 @@ def parse_exif(exif_data):
 #-----------------------Define functions for accessing GPS database connections
 #Retrieve latitude and longitude for a specific time point
 def query_specific_time(path, year, month, day, hour, minute, second):
-    
-    year=int(year)
-    month=int(month)
-    day=int(day)
-    hour=int(hour)
-    minute=int(minute)
-    second=int(second)
+    year = int(float(year))
+    month = int(float(month))
+    day = int(float(day))
+    hour = int(float(hour))
+    minute = int(float(minute))
+    second = int(float(second))
     
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
@@ -89,21 +88,7 @@ def query_specific_time(path, year, month, day, hour, minute, second):
     ''', (year, month, day, hour, minute, second))
     result = cursor.fetchone()
     
-    lon, lat = None, None  
-    
-    if result:
-        lon, lat = result
-        print(f"Location at {year}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}: Longitude={lon}, Latitude={lat}")
-    else:
-        print("No location data found for the given time.")
-    
-    conn.close()
-    
-    return lon, lat  
-
-
-path_gps_database=r'C:\Users\13267\Desktop\drift correction\time_location.db'
-
+    return result
 
 #------------------------------------------------------Define the function for drift correction
 def DriftCorr(ref_lat, ref_lon, loc_gps_lat, loc_gps_lon, loc_img_lat, loc_img_lon):
@@ -137,12 +122,13 @@ def DriftCorr(ref_lat, ref_lon, loc_gps_lat, loc_gps_lon, loc_img_lat, loc_img_l
 
 
 def main():
+    path_gps_database=r'time_location.db'
     #Path of jpg file
-    path_to_search = r'C:\Users\13267\Desktop\drift correction\DJI_202409041451_058_长期冰站正射2_控制点'
+    path_to_search = r'D:\Working_Project\Arctic_2024_Shuhang\Data\20240907_临时冰站_M2ET_热红外_processing\可见光'
     tp='.jpg'
     jpg_files = find_files(path_to_search,tp)
     
-    
+    file_names = np.array([])
     lat=np.array([])
     lon=np.array([])
     alt=np.array([])
@@ -172,6 +158,9 @@ def main():
         a8=dt1.minute
         a9=dt1.second
         
+        # get image file name without path_gps_database
+        image_file_name = os.path.basename(image_path)
+        file_names=np.append(file_names,image_file_name)
         lat=np.append(lat,a1)
         lon=np.append(lon,a2)
         alt=np.append(alt,a3)
@@ -218,9 +207,11 @@ def main():
         data_jpg_cor[i,6]=loc_img_lon_cor
         data_jpg_cor[i,7]=loc_img_lat_cor
     
+    #Save the corrected image information to csv: filename, lat, lon, alt
+    corrected_data = np.column_stack((file_names, data_jpg_cor[:, 7], data_jpg_cor[:, 6], data_jpg_cor[:, 8]))
+    np.savetxt('corrected_image_info.csv', corrected_data, delimiter=',', fmt='%s', header='filename,lat,lon,alt', comments='')
+
+    
 
 if __name__ == "__main__":
     main()
-
-
-
